@@ -27,6 +27,7 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         this.chatList = chatList;
     } // constructor END
 
+
 //    ChatAdapter(Context context, ArrayList arrayList, RecyclerView.Adapter adapter) {
 //
 //    }
