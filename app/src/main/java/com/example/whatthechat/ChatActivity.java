@@ -1,69 +1,71 @@
 package com.example.whatthechat;
 
-import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.os.Build;
 import android.os.Bundle;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.Toast;
+
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.text.SimpleDateFormat;
-import java.time.LocalDate;
-import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.Locale;
 
+import io.socket.client.IO;
 import io.socket.client.Socket;
+import io.socket.emitter.Emitter;
 
 public class ChatActivity extends AppCompatActivity {
 
-    private Socket socket;
-    String TAG = "[Chat]";
+    private static final String TAG = "[Chat]";
 
-    SharedPreferences shared;
-    SharedPreferences.Editor editor;
+    private SharedPreferences shared;
+    private SharedPreferences.Editor editor;
 
-    EditText chatMsg;
-    Button send;
+    private EditText chatMsg;
+    private Button send;
 
-    ArrayList<ChatModel> chatList = new ArrayList<>();
-    ChatAdapter chatAdapter;
-    RecyclerView chat_recyclerView;
+    private boolean hasConn = false;
+    private Socket chatSocket;
 
-    String getUsername, getRoomName;
+    private ArrayList<ChatModel> chatList = new ArrayList<>();
+    private ChatAdapter chatAdapter;
+    private RecyclerView chat_recyclerView;
 
+    private String getUsername, getRoomName;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_chat);
+        Log.i(TAG, "onCreate");
 
         initial();
+        setChatSocket();
         setSend();
-
     } // onCreate END
 
-    void initial() {
+    private void initial() {
         shared = getSharedPreferences("USER", MODE_PRIVATE);
         editor = shared.edit();
 
-        // 어댑터 선언
-        chatAdapter = new ChatAdapter(ChatActivity.this, chatList);
+        chatAdapter = new ChatAdapter(this, chatList);
 
-        // 리사이클러뷰
         chat_recyclerView = findViewById(R.id.recyclerView);
         chat_recyclerView.setAdapter(chatAdapter);
-
-        // 레이아웃 매니저 선언
-        LinearLayoutManager lm = new LinearLayoutManager(this);
-        chat_recyclerView.setLayoutManager(lm);
+        chat_recyclerView.setLayoutManager(new LinearLayoutManager(this));
         chat_recyclerView.setHasFixedSize(true);
 
         chatMsg = findViewById(R.id.chatMsg);
@@ -71,95 +73,161 @@ public class ChatActivity extends AppCompatActivity {
 
         Intent intent = getIntent();
         getUsername = intent.getStringExtra("username");
-        Log.i("getUsername check : ", getUsername);
         getRoomName = intent.getStringExtra("roomName");
-        Log.i("getRoomNumber check : ", getRoomName);
-    }
+    } // initial Method END
 
-    void setSend() {
-        send.setOnClickListener(new View.OnClickListener() {
-            @RequiresApi(api = Build.VERSION_CODES.O)
-            @Override
-            public void onClick(View v) {
-                sendMessage();
-            } // onClick END
-        }); // setOnClickListener END
+    private void setChatSocket() {
+        if (hasConn) {
+            return;
+        } // if END
+
+        try {
+            chatSocket = IO.socket("http://15.164.215.145:3000/");
+            chatSocket.connect();
+        } catch (Exception e) {
+            e.printStackTrace();
+        } // catch END
+
+        chatSocket.on("connect user", onNewUser);
+        chatSocket.on("chat message", onNewMessage);
+
+        JSONObject userId = new JSONObject();
+        try {
+            userId.put("username", shared.getString("name", "") + " Connected");
+            userId.put("roomName", "room_example");
+            chatSocket.emit("connect user", userId);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        } // catch END
+
+        hasConn = true;
+
+        send.setOnClickListener(v -> sendMessage());
+    } // setChatSocket Method END
+
+    private void setSend() {
+        send.setOnClickListener(v -> sendMessage());
     } // setSend END
 
-    @RequiresApi(api = Build.VERSION_CODES.O)
-    void sendMessage() {
-        Log.i(TAG, "sendMessage Method");
+    private void sendMessage() {
+        shared = getSharedPreferences("USER", Context.MODE_PRIVATE);
         long now = System.currentTimeMillis();
-        Log.i(TAG, "long now check : " + now);
         Date date = new Date(now);
-        Log.i(TAG, "date check : " + date);
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
-        Log.i(TAG, "sdf check : " + sdf);
-        String getTime = sdf.format(date);
-        Log.i(TAG, "getTime check : " + getTime);
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+        String getToday = sdf.format(date);
 
-        LocalDate nowDate = LocalDate.now();
-        Log.i(TAG, "LocalDate nowDate : " + nowDate);
-        int year = nowDate.getYear(); // 연도
-        Log.i(TAG, "year check : " + year);
-        String month = nowDate.getMonth().toString(); // 몇 월
-        Log.i(TAG, "month check : " + month);
-        int dayOfMonth = nowDate.getDayOfMonth(); // 몇 일
-        Log.i(TAG, "dayOfmonth check : " + dayOfMonth);
+        String message = chatMsg.getText().toString().trim();
+        if (TextUtils.isEmpty(message)) {
+            return;
+        } // if END
 
-        LocalTime nowTime = LocalTime.now();
-        Log.i(TAG, "LocalTime nowTime : " + nowTime);
-        int hour;
-        hour = nowTime.getHour(); // 몇 시
-        Log.i(TAG, "hour check : " + hour);
-        if (hour < 13) {
-            hour = hour + 12;
-            Log.i(TAG, "hour < 13 check : " + hour);
-        } else if (hour > 12) {
-            hour = hour - 12;
-            Log.i(TAG, "hour > 12 check : " + hour);
-        }
-        int minute = nowTime.getMinute(); // 몇 분
-        Log.i(TAG, "minute check : " + minute);
-        int second = nowTime.getSecond(); // 몇 초
-        Log.i(TAG, "second check : " + second);
-        String hourStr = Integer.toString(hour);
-        Log.i(TAG, "hourStr check : " + hourStr);
-        String minuteStr = Integer.toString(minute);
-        Log.i(TAG, "minuteStr check : " + minuteStr);
+        SimpleDateFormat sdfTime = new SimpleDateFormat("HH:mm", Locale.getDefault());
+        String getTime = sdfTime.format(date);
+        String[] reTime = getTime.split(":");
+        String hour = reTime[0];
+        String minute = reTime[1];
+        int hourToInt = Integer.parseInt(hour);
+        int minuteToInt = Integer.parseInt(minute);
         String hourNminute;
-        if (hourStr.length() < 2) {
-            hourNminute = hourStr + "시 "  + minuteStr + "분";
-            Log.i(TAG, "hourNminute check : " + hourNminute);
+        if (hourToInt > 12) {
+            hourToInt -= 12;
+            String reHour = Integer.toString(hourToInt);
+            hourNminute = "오후" + reHour + ": " + minute;
+        } else if (hour.equals("00")) {
+            hourToInt += 12;
+            String reHour = Integer.toString(hourToInt);
+            hourNminute = "오전 " + reHour + ": " + minute;
         } else {
-            hourNminute = hourStr + "시 "  + minuteStr + "분";
-        }
+            String[] zeroCut = hour.split("0");
+            String amHour = zeroCut[1];
+            hourNminute = "오전 " + amHour + ": " + minute;
+        } // else END
 
-        ChatModel item = new ChatModel(shared.getString("name",""), chatMsg.getText().toString(), "example", hourNminute);
-        chatAdapter.addItem(item);
-        chatAdapter.notifyDataSetChanged();
+//        ChatModel item = new ChatModel(shared.getString("name", ""), chatMsg.getText().toString(), "example", hourNminute);
+//        chatAdapter.addItem(item);
+//        chatAdapter.notifyDataSetChanged();
 
         chatMsg.setText("");
+
+        JSONObject jsonObject = new JSONObject();
+        try {
+            jsonObject.put("name", shared.getString("name", ""));
+            jsonObject.put("script", message);
+            jsonObject.put("profile_image", "example");
+            jsonObject.put("date_time", hourNminute);
+            jsonObject.put("roomName", "room_example");
+        } catch (JSONException e) {
+            e.printStackTrace();
+        } // catch END
+        chatSocket.emit("chat message", jsonObject);
     } // sendMessage Method END
 
-//    public void init() {
-//        try {
-//            socket = IO.socket("http://54.180.81.237:3000/");
-//            Log.d("SOCKET", "Connection success : " + socket);
-//        } catch (URISyntaxException e) {
-//            e.printStackTrace();
-//        }
-//
-//        Intent intent = getIntent();
-//        username = intent.getStringExtra("username");
-//        roomNumber = intent.getStringExtra("roomNumber");
-//
-//        socket.connect();
-//    }
-//
-//    @Override
-//    protected void onDestroy() {
-//        super.onDestroy();
-//        socket.disconnect();
-//    }
-}
+    private Emitter.Listener onNewMessage = args -> runOnUiThread(() -> {
+        JSONObject data = (JSONObject) args[0];
+        String name;
+        String script;
+        String profile_image;
+        String date_time;
+
+        try {
+            name = data.getString("name");
+            script = data.getString("script");
+            profile_image = data.getString("profile_image");
+            date_time = data.getString("date_time");
+
+            ChatModel format = new ChatModel(name, script, profile_image, date_time);
+            chatAdapter.addItem(format);
+            chatAdapter.notifyDataSetChanged();
+
+        } catch (JSONException e) {
+            e.printStackTrace();
+        } // catch END
+    }); // onNewMessage END
+
+    private Emitter.Listener onNewUser = args -> runOnUiThread(() -> {
+        int length = args.length;
+        if (length == 0) {
+            return;
+        } // if END
+
+        String username = args[0].toString();
+        try {
+            JSONObject object = new JSONObject(username);
+            username = object.getString("username");
+        } catch (JSONException e) {
+            e.printStackTrace();
+        } // catch END
+    }); // onNewUser END
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        Log.i(TAG, "onStart");
+    } // onStart END
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        Log.i(TAG, "onResume");
+    } // onResume END
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        Log.i(TAG, "onPause");
+    } // onPause END
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        Log.i(TAG, "onStop");
+    } // onStop END
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        Log.i(TAG, "onDestroy");
+        chatSocket.disconnect();
+        Log.i(TAG, "chatSocket.disconnect check : " + chatSocket);
+    } // onDestroy END
+} // ChatActivity Class END

@@ -11,25 +11,25 @@ public class ChatModel {
         this.script = script;
         this.profile_image = profile_image;
         this.date_time = date_time;
-    }
+    } // constructor END
 
     public String getName() {
         return name;
-    }
+    } // getName END
 
     public String getScript() {
         return script;
-    }
+    } // getScript END
 
     public String getProfile_image() {
         return profile_image;
-    }
+    } // getProfile_image END
 
     public String getDate_time() {
         return date_time;
-    }
+    } // getDate_time END
 
     ChatModel() {
 
-    }
-}
+    } // default constructor END
+} // ChatModel Class END

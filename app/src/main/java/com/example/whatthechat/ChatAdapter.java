@@ -127,7 +127,7 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         Log.i(TAG, "getItemViewType Method");
         preferences = context.getSharedPreferences("USER", Context.MODE_PRIVATE);
 
-        Log.i(TAG,"shared name check : " + preferences.getString("name",""));
+        Log.i(TAG, "shared name check : " + preferences.getString("name", ""));
         // 내 아이디와 arraylist의 name이 같다면 내꺼 아니면 상대꺼
         if (chatList.get(position).name.equals(preferences.getString("name", ""))) {
             Log.i(TAG, "내 아이디 == chatList.get(position).name : " + chatList.get(position).name);

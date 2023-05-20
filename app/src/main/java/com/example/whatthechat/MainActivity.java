@@ -38,11 +38,44 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        Log.i(TAG, "onCreate");
 
         initial();
         setEnter();
 
     } // onCreate END
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        Log.i(TAG, "onStart");
+    } // onStart END
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        Log.i(TAG, "onResume");
+    } // onResume END
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        Log.i(TAG, "onPause");
+    } // onPause END
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        Log.i(TAG, "onStop");
+    } // onStop END
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        Log.i(TAG, "onDestroy");
+    } // onDestroy END
+
+
 
     void initial() {
         name = findViewById(R.id.nameEdit);
@@ -65,6 +98,7 @@ public class MainActivity extends AppCompatActivity {
                 Log.i(TAG, "roomStr check : " + roomStr);
 
                 editor.putString("name", nameStr);
+                editor.commit();
 
                 Intent intent = new Intent(getApplicationContext(), ChatActivity.class);
                 intent.putExtra("username", nameStr);
