@@ -28,6 +28,8 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     } // constructor END
 
 
+
+
 //    ChatAdapter(Context context, ArrayList arrayList, RecyclerView.Adapter adapter) {
 //
 //    }
